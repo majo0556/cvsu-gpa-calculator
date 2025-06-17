@@ -8,22 +8,21 @@
     :root {
       --cvsy-green: #005f00;
       --cvsy-yellow: #ffd700;
-      --bg-soft: #f2f8f2;
-      --card-bg: #ffffff;
-      --text-dark: #333;
+      --bg-soft: #f4fff4;
+      --card-bg: #fff;
+      --text-dark: #222;
       --shadow: rgba(0, 0, 0, 0.1);
     }
     body {
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       background: var(--bg-soft);
-      color: var(--text-dark);
       display: flex;
       justify-content: center;
       padding: 2rem;
     }
     .container {
-      max-width: 800px;
+      max-width: 700px;
       width: 100%;
     }
     h1 {
@@ -53,73 +52,73 @@
       font-size: 1rem;
     }
     .btn {
-      display: inline-block;
       background: var(--cvsy-green);
       color: #fff;
-      border: none;
-      padding: 0.7rem 1.2rem;
+      padding: 0.6rem 1.2rem;
       font-size: 1rem;
-      border-radius: 0.25rem;
+      border: none;
+      border-radius: 0.3rem;
       cursor: pointer;
-      transition: background 0.2s;
       margin-right: 1rem;
     }
-    .btn:hover { background: darkgreen; }
+    .btn:hover {
+      background: darkgreen;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 1rem;
     }
-    table thead {
-      background: var(--cvsy-green);
-      color: #fff;
-    }
-    table th, table td {
+    th, td {
       padding: 0.75rem;
-      border: 1px solid #ddd;
       text-align: center;
+      border: 1px solid #ddd;
+    }
+    thead {
+      background: var(--cvsy-green);
+      color: white;
     }
     .result-card {
       text-align: center;
-      padding: 1.5rem;
-      font-size: 1.25rem;
-      border-radius: 0.5rem;
       background: var(--cvsy-yellow);
       color: var(--cvsy-green);
+      padding: 1.5rem;
+      border-radius: 0.5rem;
       font-weight: bold;
+      font-size: 1.2rem;
       box-shadow: 0 2px 8px var(--shadow);
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>CvSU GPA & Latin Honors</h1>
+    <h1>CvSU GPA & Latin Honors Checker</h1>
 
     <div class="form-section">
       <h2>Add Semester</h2>
       <div class="form-group">
-        <label for="sem">Semester:</label>
-        <input type="text" id="sem" placeholder="e.g., 1st Sem 2025">
+        <label>Semester Name:</label>
+        <input type="text" id="sem" placeholder="e.g., 1st Sem 2024" />
         
-        <label for="avg">Average Grade (%):</label>
-        <input type="number" id="avg" min="0" max="100" step="0.01" placeholder="e.g., 92.5">
+        <label>GPA for Semester:</label>
+        <input type="number" id="gpa" step="0.01" min="1" max="5" placeholder="e.g., 1.50" />
         
-        <label for="units">Total Units (excl. NSTP):</label>
-        <input type="number" id="units" min="0" step="0.5" placeholder="e.g., 18">
+        <label>Total Units (excluding NSTP):</label>
+        <input type="number" id="units" step="0.5" min="0" placeholder="e.g., 18" />
         
-        <label for="nstp">NSTP Units:</label>
-        <input type="number" id="nstp" min="0" step="0.5" placeholder="e.g., 3">
+        <label>NSTP Grade (optional):</label>
+        <input type="number" id="nstp-grade" step="0.01" min="1" max="5" placeholder="e.g., 2.00" />
       </div>
       <button class="btn" onclick="addSemester()">➕ Add Semester</button>
-      <button class="btn" onclick="computeOverall()">📊 Compute GPA</button>
+      <button class="btn" onclick="computeGWA()">📊 Compute GWA</button>
     </div>
 
     <div class="summary">
-      <h2>Semesters Entered</h2>
+      <h2>Semesters Summary</h2>
       <table id="sem-table">
-        <thead><tr>
-          <th>Semester</th><th>Avg %</th><th>Units</th><th>NSTP Units</th><th>Grade Points</th>
-        </tr></thead>
+        <thead>
+          <tr><th>Semester</th><th>GPA</th><th>Units</th></tr>
+        </thead>
         <tbody></tbody>
       </table>
     </div>
@@ -128,97 +127,82 @@
   </div>
 
   <script>
-    const gradeMap = [
-      { min: 96.72, max: 100, pts: 1.0 },
-      { min: 93.38, max: 96.71, pts: 1.25 },
-      { min: 90.04, max: 93.37, pts: 1.5 },
-      { min: 86.70, max: 90.03, pts: 1.75 },
-      { min: 83.36, max: 86.69, pts: 2.0 },
-      { min: 80.02, max: 83.35, pts: 2.25 },
-      { min: 76.68, max: 80.01, pts: 2.5 },
-      { min: 73.34, max: 76.67, pts: 2.75 },
-      { min: 70.00, max: 73.33, pts: 3.0 },
-      { min: 60.00, max: 69.99, pts: 4.0 },
-      { min: 0.00, max: 59.99, pts: 5.0 }
-    ];
-
-    const sems = [];
-
-    function percentToPoints(p) {
-      const e = gradeMap.find(g => p >= g.min && p <= g.max);
-      return e ? e.pts : null;
-    }
+    const semesters = [];
+    let nstpGrade = null;
 
     function addSemester() {
-      const sem = document.getElementById('sem').value.trim();
-      const avg = parseFloat(document.getElementById('avg').value);
+      const semName = document.getElementById('sem').value.trim();
+      const gpa = parseFloat(document.getElementById('gpa').value);
       const units = parseFloat(document.getElementById('units').value);
-      const nstp = parseFloat(document.getElementById('nstp').value) || 0;
+      const nstp = document.getElementById('nstp-grade').value;
 
-      if (!sem || isNaN(avg) || isNaN(units)) {
-        alert("Please complete all fields correctly.");
+      if (!semName || isNaN(gpa) || isNaN(units)) {
+        alert("Please complete all required fields.");
         return;
       }
 
-      const pts = percentToPoints(avg);
-      if (pts === null) {
-        alert("Average% must be 0–100.");
+      if (gpa < 1 || gpa > 5) {
+        alert("GPA must be between 1.00 and 5.00.");
         return;
       }
 
-      const netUnits = units;
-      sems.push({ sem, avg, units: netUnits, nstp, pts });
+      if (nstp && !nstpGrade) {
+        const grade = parseFloat(nstp);
+        if (grade >= 1 && grade <= 5) {
+          nstpGrade = grade;
+        }
+      }
+
+      semesters.push({ semName, gpa, units });
 
       const tbody = document.querySelector('#sem-table tbody');
       const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${sem}</td><td>${avg.toFixed(2)}</td><td>${units}</td>
-        <td>${nstp}</td><td>${pts.toFixed(2)}</td>`;
+      row.innerHTML = `<td>${semName}</td><td>${gpa.toFixed(2)}</td><td>${units}</td>`;
       tbody.appendChild(row);
 
-      // Clear fields
       document.getElementById('sem').value = '';
-      document.getElementById('avg').value = '';
+      document.getElementById('gpa').value = '';
       document.getElementById('units').value = '';
-      document.getElementById('nstp').value = '';
+      document.getElementById('nstp-grade').value = '';
     }
 
-    function computeOverall() {
-      if (sems.length === 0) {
+    function computeGWA() {
+      if (semesters.length === 0) {
         alert("Add at least one semester.");
         return;
       }
 
-      let totalPts = 0, totalUnits = 0;
-      let lowest = 1.0, hasFail = false, hasCond4 = false;
+      let totalPoints = 0, totalUnits = 0, lowest = 1.0;
+      let hasFail = false, hasCond4 = false;
 
-      sems.forEach(s => {
-        const pts = s.pts;
-        totalPts += pts * s.units;
+      semesters.forEach(s => {
+        totalPoints += s.gpa * s.units;
         totalUnits += s.units;
-
-        if (pts > lowest) lowest = pts;
-        if (pts === 5.0) hasFail = true;
-        if (pts === 4.0) hasCond4 = true;
+        if (s.gpa > lowest) lowest = s.gpa;
+        if (s.gpa === 5.0) hasFail = true;
+        if (s.gpa === 4.0) hasCond4 = true;
       });
 
-      const gpa = totalPts / totalUnits;
+      if (nstpGrade !== null) {
+        if (nstpGrade === 4.0) hasCond4 = true;
+        if (nstpGrade === 5.0) hasFail = true;
+      }
+
+      const gwa = totalPoints / totalUnits;
       let honor = 'No Latin Honor';
 
       if (!hasFail && !hasCond4) {
-        if (gpa >= 1.0 && gpa <= 1.21 && lowest <= 2.00) honor = 'Summa Cum Laude';
-        else if (gpa <= 1.45 && lowest <= 2.25) honor = 'Magna Cum Laude';
-        else if (gpa <= 1.75 && lowest <= 2.50) honor = 'Cum Laude';
+        if (gwa >= 1.00 && gwa <= 1.21 && lowest <= 2.00) honor = 'Summa Cum Laude';
+        else if (gwa <= 1.45 && lowest <= 2.25) honor = 'Magna Cum Laude';
+        else if (gwa <= 1.75 && lowest <= 2.50) honor = 'Cum Laude';
       }
 
       document.getElementById('result').innerHTML = `
         <div class="result-card">
-          Cumulative GPA: <strong>${gpa.toFixed(3)}</strong><br>
-          Latin Honor: <strong>${honor}</strong>
+          General Weighted Average (GWA): ${gwa.toFixed(3)}<br>
+          Latin Honor Qualification: ${honor}
         </div>`;
     }
-
-    addSemester();
   </script>
 </body>
 </html>
